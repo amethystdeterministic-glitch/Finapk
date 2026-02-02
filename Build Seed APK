@@ -1,0 +1,96 @@
+name: Build Seed APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android Seed
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Create Android project structure
+        run: |
+          mkdir -p app/src/main/java/com/amethyst/portal
+          mkdir -p app/src/main/res/values
+
+          # AndroidManifest
+          cat > app/src/main/AndroidManifest.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.amethyst.portal">
+    <application android:label="Amethyst Portal">
+      <activity android:name=".MainActivity"
+                android:exported="true">
+        <intent-filter>
+          <action android:name="android.intent.action.MAIN" />
+          <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity>
+    </application>
+</manifest>
+EOF
+
+          # MainActivity.java
+          cat > app/src/main/java/com/amethyst/portal/MainActivity.java << 'EOF'
+package com.amethyst.portal;
+import android.app.Activity;
+import android.os.Bundle;
+public class MainActivity extends Activity {
+  @Override
+  protected void onCreate(Bundle b) {
+    super.onCreate(b);
+  }
+}
+EOF
+
+          # A basic string resource
+          cat > app/src/main/res/values/strings.xml << 'EOF'
+<resources>
+  <string name="app_name">Amethyst Portal</string>
+</resources>
+EOF
+
+          # Gradle build files
+          cat > build.gradle << 'EOF'
+plugins {
+  id 'com.android.application'
+  id 'org.jetbrains.kotlin.android' version '1.9.0' apply false
+}
+
+android {
+  compileSdk 34
+
+  defaultConfig {
+    applicationId "com.amethyst.portal"
+    minSdk 21
+    targetSdk 34
+    versionCode 1
+    versionName "1.0"
+  }
+}
+
+EOF
+
+      - name: Build APK
+        run: |
+          chmod +x gradlew || true
+          ./gradlew assembleDebug
+
+      - name: Upload built APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-apk
+          path: app/build/outputs/apk/debug/*.apk
